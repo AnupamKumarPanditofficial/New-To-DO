@@ -22,6 +22,7 @@ interface AddTaskFormProps {
 export default function AddTaskForm({ onAddTask }: AddTaskFormProps) {
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [time, setTime] = useState('');
   const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -31,13 +32,41 @@ export default function AddTaskForm({ onAddTask }: AddTaskFormProps) {
       return;
     }
     if (!dueDate) {
-      toast({ title: "Please select a due date and time.", variant: "destructive" });
+      toast({ title: "Please select a due date.", variant: "destructive" });
       return;
     }
-    onAddTask(title, dueDate);
+    if (!time) {
+      toast({ title: "Please select a time.", variant: "destructive"});
+      return;
+    }
+
+    const [hours, minutes] = time.split(':').map(Number);
+    const combinedDate = new Date(dueDate);
+    combinedDate.setHours(hours, minutes, 0, 0);
+
+    if (combinedDate < new Date()) {
+      toast({ title: "Due date and time cannot be in the past.", variant: "destructive" });
+      return;
+    }
+
+    onAddTask(title, combinedDate);
     setTitle('');
     setDueDate(undefined);
+    setTime('');
   };
+
+  const handleDateSelect = (selectedDate: Date | undefined) => {
+    if(!selectedDate) {
+      setDueDate(undefined);
+      return;
+    }
+    // Preserve time if it's already set
+    if (dueDate) {
+        selectedDate.setHours(dueDate.getHours());
+        selectedDate.setMinutes(dueDate.getMinutes());
+    }
+    setDueDate(selectedDate);
+  }
 
   return (
     <Card className="shadow-lg">
@@ -48,7 +77,7 @@ export default function AddTaskForm({ onAddTask }: AddTaskFormProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4 items-center">
+        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4 items-center flex-wrap">
           <Input
             placeholder="What do you need to do?"
             value={title}
@@ -60,7 +89,7 @@ export default function AddTaskForm({ onAddTask }: AddTaskFormProps) {
               <Button
                 variant={'outline'}
                 className={cn(
-                  'w-full sm:w-[280px] justify-start text-left font-normal',
+                  'w-full sm:w-[240px] justify-start text-left font-normal',
                   !dueDate && 'text-muted-foreground'
                 )}
               >
@@ -72,12 +101,18 @@ export default function AddTaskForm({ onAddTask }: AddTaskFormProps) {
               <Calendar
                 mode="single"
                 selected={dueDate}
-                onSelect={setDueDate}
+                onSelect={handleDateSelect}
                 initialFocus
                 disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
               />
             </PopoverContent>
           </Popover>
+           <Input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            className="w-full sm:w-[120px]"
+          />
           <Button type="submit" className="w-full sm:w-auto bg-accent hover:bg-accent/90">
             Add Task
           </Button>

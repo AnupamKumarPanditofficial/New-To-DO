@@ -1,6 +1,6 @@
 'use client';
 
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { Trash2, Calendar } from 'lucide-react';
 import type { Task } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,8 @@ interface TaskItemProps {
 export default function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
   const dueDate = new Date(task.dueDate);
   const isOverdue = !task.isCompleted && new Date() > dueDate;
+
+  const formattedDueDate = format(dueDate, 'PPp');
 
   return (
     <Card
@@ -46,7 +48,7 @@ export default function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
           <div className={cn(
             "flex items-center gap-2 text-xs",
             isOverdue ? "text-destructive" : "text-muted-foreground"
-          )}>
+          )} title={formattedDueDate}>
             <Calendar className="h-3 w-3" />
             <span>
               {isOverdue ? 'Was due' : 'Due'} {formatDistanceToNow(dueDate, { addSuffix: true })}
