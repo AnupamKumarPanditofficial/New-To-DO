@@ -10,12 +10,12 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 
-export const SuggestTasksInputSchema = z.object({
+const SuggestTasksInputSchema = z.object({
   prompt: z.string().describe('The user\'s mood or goal, e.g., "feeling sad", "exam prep"'),
 });
 export type SuggestTasksInput = z.infer<typeof SuggestTasksInputSchema>;
 
-export const SuggestTasksOutputSchema = z.object({
+const SuggestTasksOutputSchema = z.object({
   suggestions: z.array(z.string()).describe('A list of 3-5 short, actionable task suggestions.'),
 });
 export type SuggestTasksOutput = z.infer<typeof SuggestTasksOutputSchema>;
