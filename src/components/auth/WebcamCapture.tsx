@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
 import { Camera, CameraOff, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,7 @@ interface WebcamCaptureProps {
 
 export interface WebcamCaptureRef {
   capture: () => void;
+  stopCamera: () => void;
 }
 
 type CameraState = 'loading' | 'on' | 'off' | 'denied' | 'error';
@@ -25,15 +26,27 @@ const WebcamCapture = forwardRef<WebcamCaptureRef, WebcamCaptureProps>(
     const [cameraState, setCameraState] = useState<CameraState>('loading');
     const { toast } = useToast();
 
-    const startCamera = async () => {
+    const stopCamera = useCallback(() => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach((track) => track.stop());
+        videoRef.current.srcObject = null;
+        setCameraState('off');
+      }
+    }, []);
+
+    const startCamera = useCallback(async () => {
       setCameraState('loading');
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true });
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
+            setCameraState('on');
+          } else {
+             // If the component unmounted before the stream started, stop the tracks.
+            stream.getTracks().forEach(track => track.stop());
           }
-          setCameraState('on');
         } catch (err: any) {
           console.error('Error accessing camera:', err);
           if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
@@ -45,16 +58,7 @@ const WebcamCapture = forwardRef<WebcamCaptureRef, WebcamCaptureProps>(
       } else {
         setCameraState('error');
       }
-    };
-
-    const stopCamera = () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach((track) => track.stop());
-        videoRef.current.srcObject = null;
-        setCameraState('off');
-      }
-    };
+    }, []);
 
     const handleToggleCamera = () => {
       if (cameraState === 'on') {
@@ -66,11 +70,11 @@ const WebcamCapture = forwardRef<WebcamCaptureRef, WebcamCaptureProps>(
     
     useEffect(() => {
       startCamera();
+      // Define a cleanup function to be called when the component unmounts.
       return () => {
         stopCamera();
       };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [startCamera, stopCamera]);
 
     const capture = () => {
       if (cameraState !== 'on' || !videoRef.current || !canvasRef.current) {
@@ -99,6 +103,7 @@ const WebcamCapture = forwardRef<WebcamCaptureRef, WebcamCaptureProps>(
 
     useImperativeHandle(ref, () => ({
       capture,
+      stopCamera,
     }));
 
     return (

@@ -38,6 +38,9 @@ export default function LoginForm({ user, onSwitchToRegister }: LoginFormProps) 
     }
     try {
       const result = await facialRecognitionLogin({ photoDataUri: imageSrc });
+      
+      // Stop the camera regardless of the result to turn the light off.
+      webcamRef.current?.stopCamera();
 
       if (result.isLoginSuccessful) {
         localStorage.setItem('facetask_session', JSON.stringify({ userId: user.id }));
