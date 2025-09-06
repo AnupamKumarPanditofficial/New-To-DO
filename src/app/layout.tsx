@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'FaceTask',
+  title: 'Task-Toggler',
   description: 'A modern Full-Stack To-do list with facial recognition.',
 };
 

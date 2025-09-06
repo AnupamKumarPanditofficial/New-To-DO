@@ -33,7 +33,7 @@ export default function Header({ user }: HeaderProps) {
           <a className="mr-6 flex items-center space-x-2" href="/todo">
             <LayoutList className="h-6 w-6 text-primary" />
             <span className="font-bold font-headline sm:inline-block">
-              FaceTask
+              Task-Toggler
             </span>
           </a>
         </div>

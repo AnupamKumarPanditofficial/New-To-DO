@@ -75,7 +75,7 @@ export default function RegisterForm({ onRegistrationComplete }: RegisterFormPro
     <Card className="w-full max-w-md shadow-2xl">
       <CardHeader>
         <CardTitle className="text-2xl font-headline flex items-center gap-2">
-          <UserPlus /> Welcome to FaceTask!
+          <UserPlus /> Welcome to Task-Toggler!
         </CardTitle>
         <CardDescription>Let's get you set up. Please enter your name and capture your face for future logins.</CardDescription>
       </CardHeader>
