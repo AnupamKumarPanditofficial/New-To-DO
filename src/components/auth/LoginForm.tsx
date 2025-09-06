@@ -45,15 +45,24 @@ export default function LoginForm() {
   };
 
   const handleCapture = async (imageSrc: string) => {
+    if (!user) {
+      toast({
+        title: 'Login Error',
+        description: 'User data is not loaded. Cannot attempt login.',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
+    }
+    
     try {
-      // In a real app, you'd send the image to a backend.
-      // Here, we simulate the Genkit flow call.
       // The AI flow is designed to return a user ID if successful.
-      // We will simulate a successful response.
+      // In a real-world scenario, the AI would compare the face against a database.
+      // For this app, we're simulating that by having the AI "recognize" the registered user if a face is present.
+      // We will now correctly use the response from the AI.
       const result = await facialRecognitionLogin({ photoDataUri: imageSrc });
 
-      // Simulate a successful login for any recognized face
-      if (user) {
+      if (result.isLoginSuccessful && result.userId === user.id) {
         localStorage.setItem('facetask_session', JSON.stringify({ userId: user.id }));
         toast({
           title: 'Login Successful!',
@@ -61,13 +70,19 @@ export default function LoginForm() {
         });
         router.push('/todo');
       } else {
-        throw new Error('User not found after recognition.');
+        // This handles both AI not recognizing the face and a mismatch with the expected user
+         toast({
+          title: 'Login Failed',
+          description: 'We could not recognize your face. Please try again.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('Login failed:', error);
       toast({
         title: 'Login Failed',
-        description: 'We could not recognize your face. Please try again.',
+        description: 'An error occurred during facial recognition. Please try again.',
         variant: 'destructive',
       });
       setIsLoading(false);
