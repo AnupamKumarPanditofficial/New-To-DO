@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Users } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, setDoc, getDoc } from 'firebase/firestore';
+import TaskSuggestions from '@/components/tasks/TaskSuggestions';
 
 
 export default function TodoPage() {
@@ -142,6 +143,7 @@ export default function TodoPage() {
             </Button>
           </div>
           <AddTaskForm onAddTask={addTask} />
+          <TaskSuggestions onAddTask={addTask} />
           <TaskList tasks={tasks} onToggleTask={toggleTask} onDeleteTask={deleteTask} />
           <TaskAnalytics tasks={tasks} />
         </div>
