@@ -88,8 +88,8 @@ export default function TodoPage() {
       <main className="flex-1 w-full max-w-4xl mx-auto p-4 sm:p-6">
         <div className="space-y-8">
           <AddTaskForm onAddTask={addTask} />
-          <TaskAnalytics tasks={tasks} />
           <TaskList tasks={tasks} onToggleTask={toggleTask} onDeleteTask={deleteTask} />
+          <TaskAnalytics tasks={tasks} />
         </div>
       </main>
       <TaskReminders tasks={tasks} />
