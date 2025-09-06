@@ -47,8 +47,8 @@ export default function SetGroupPurposeDialog({
 
     const purposeData: Partial<CollabGroup> = {
       purpose,
-      examName: purpose === 'exams' ? examName : undefined,
-      examDuration: purpose === 'exams' ? (parseInt(duration) as CollabGroup['examDuration']) : undefined,
+      examName: purpose === 'exams' ? examName : null,
+      examDuration: purpose === 'exams' ? (parseInt(duration) as CollabGroup['examDuration']) : null,
     };
     onPurposeSet(purposeData);
   };

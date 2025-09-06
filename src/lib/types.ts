@@ -22,8 +22,8 @@ export interface CollabGroup {
     id: string;
     members: CollabMember[];
     purpose?: 'normal' | 'exams';
-    examName?: string;
-    examDuration?: 30 | 60 | 90 | 120;
+    examName?: string | null;
+    examDuration?: 30 | 60 | 90 | 120 | null;
 }
 
 export interface Purpose {
