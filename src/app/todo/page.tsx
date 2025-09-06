@@ -6,16 +6,20 @@ import { Loader2 } from 'lucide-react';
 import Header from '@/components/Header';
 import TaskList from '@/components/tasks/TaskList';
 import TaskReminders from '@/components/tasks/TaskReminders';
-import type { User, Task } from '@/lib/types';
+import type { User, Task, CollabGroup } from '@/lib/types';
 import AddTaskForm from '@/components/tasks/AddTaskForm';
 import TaskAnalytics from '@/components/tasks/TaskAnalytics';
 import { Button } from '@/components/ui/button';
 import { Users } from 'lucide-react';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, setDoc, getDoc } from 'firebase/firestore';
+
 
 export default function TodoPage() {
   const [user, setUser] = useState<User | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [groupId, setGroupId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -27,30 +31,65 @@ export default function TodoPage() {
       return;
     }
 
-    try {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
+    const parsedUser = JSON.parse(storedUser);
+    setUser(parsedUser);
 
+    const storedGroupId = localStorage.getItem(`facetask_group_${parsedUser.id}`);
+    setGroupId(storedGroupId);
+
+    let unsubscribe: () => void;
+
+    if (storedGroupId) {
+      // User is in a group, listen to group changes
+      const groupRef = doc(db, 'collabGroups', storedGroupId);
+      unsubscribe = onSnapshot(groupRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const groupData = docSnap.data() as CollabGroup;
+          const member = groupData.members.find(m => m.id === parsedUser.id);
+          setTasks(member?.tasks || []);
+        }
+        setIsLoading(false);
+      });
+    } else {
+      // User is not in a group, use local storage
       const storedTasks = localStorage.getItem(`facetask_tasks_${parsedUser.id}`);
       if (storedTasks) {
         setTasks(JSON.parse(storedTasks));
       }
-    } catch (error) {
-      console.error('Failed to parse data from localStorage', error);
-      // Clear corrupted data and redirect
-      localStorage.clear();
-      router.replace('/');
-      return;
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
+    
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [router]);
   
+  // This effect syncs tasks to the correct storage (local or Firestore)
   useEffect(() => {
-    if (user) {
+    if (!user || isLoading) return;
+
+    if (groupId) {
+      // Firestore sync
+      const groupRef = doc(db, 'collabGroups', groupId);
+      getDoc(groupRef).then(docSnap => {
+        if (docSnap.exists()) {
+          const groupData = docSnap.data() as CollabGroup;
+          const currentMember = groupData.members.find(m => m.id === user.id);
+          if (currentMember) {
+             const updatedMembers = groupData.members.map(m => 
+                m.id === user.id ? { ...m, tasks } : m
+            );
+            updateDoc(groupRef, { members: updatedMembers });
+          }
+        }
+      });
+    } else {
+      // Local storage sync
       localStorage.setItem(`facetask_tasks_${user.id}`, JSON.stringify(tasks));
     }
-  }, [tasks, user]);
+  }, [tasks, user, groupId, isLoading]);
 
   const addTask = (title: string, dueDate: Date) => {
     if (!user) return;
@@ -61,7 +100,7 @@ export default function TodoPage() {
       dueDate: dueDate.toISOString(),
       isCompleted: false,
     };
-    setTasks(prevTasks => [newTask, ...prevTasks]);
+    setTasks(prevTasks => [newTask, ...prevTasks].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
   };
 
   const toggleTask = (taskId: string) => {
