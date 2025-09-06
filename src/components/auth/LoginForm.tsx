@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { facialRecognitionLogin } from '@/ai/flows/facial-recognition-login';
 import WebcamCapture, { WebcamCaptureRef } from './WebcamCapture';
@@ -10,34 +10,16 @@ import { useToast } from '@/hooks/use-toast';
 import type { User } from '@/lib/types';
 import { Loader2, LogIn, User as UserIcon } from 'lucide-react';
 
-export default function LoginForm() {
+interface LoginFormProps {
+  user: User;
+  onSwitchToRegister: () => void;
+}
+
+export default function LoginForm({ user, onSwitchToRegister }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
   const webcamRef = useRef<WebcamCaptureRef>(null);
   const router = useRouter();
   const { toast } = useToast();
-
-  useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('facetask_user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      } else {
-        // This case should ideally not happen if AuthPage logic is correct
-        router.push('/');
-      }
-    } catch (error) {
-      console.error('Failed to load user data:', error);
-      toast({
-        title: 'Error',
-        description: 'Could not load user data. Please try registering again.',
-        variant: 'destructive',
-      });
-      localStorage.removeItem('facetask_user');
-      router.push('/');
-    }
-  }, [router, toast]);
-  
 
   const handleLogin = () => {
     setIsLoading(true);
@@ -45,16 +27,6 @@ export default function LoginForm() {
   };
 
   const handleCapture = async (imageSrc: string) => {
-    if (!user) {
-      toast({
-        title: 'Login Error',
-        description: 'User data is not loaded. Cannot attempt login.',
-        variant: 'destructive',
-      });
-      setIsLoading(false);
-      return;
-    }
-    
     try {
       const result = await facialRecognitionLogin({ photoDataUri: imageSrc });
 
@@ -84,21 +56,6 @@ export default function LoginForm() {
     }
   };
 
-  if (!user) {
-    return (
-      <Card className="w-full max-w-md shadow-2xl">
-        <CardHeader>
-          <CardTitle>Loading User...</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-center items-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card className="w-full max-w-md shadow-2xl">
       <CardHeader>
@@ -120,10 +77,7 @@ export default function LoginForm() {
             <><LogIn className="mr-2 h-4 w-4" /> Login with Face</>
           )}
         </Button>
-        <Button variant="link" size="sm" onClick={() => {
-            localStorage.clear();
-            router.push('/');
-        }}>
+        <Button variant="link" size="sm" onClick={onSwitchToRegister}>
             Not you? Register a new user.
         </Button>
       </CardFooter>

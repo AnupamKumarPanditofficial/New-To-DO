@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
 import WebcamCapture, { WebcamCaptureRef } from './WebcamCapture';
 import { Button } from '@/components/ui/button';
@@ -15,12 +14,14 @@ import { Loader2, UserPlus } from 'lucide-react';
 // A simple polyfill for uuid if it's not available
 const getUUID = () => (typeof window !== 'undefined' && window.crypto ? crypto.randomUUID() : uuidv4());
 
+interface RegisterFormProps {
+  onRegistrationComplete: () => void;
+}
 
-export default function RegisterForm() {
+export default function RegisterForm({ onRegistrationComplete }: RegisterFormProps) {
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const webcamRef = useRef<WebcamCaptureRef>(null);
-  const router = useRouter();
   const { toast } = useToast();
 
   const handleRegister = () => {
@@ -49,7 +50,7 @@ export default function RegisterForm() {
         title: 'Registration Successful!',
         description: `Welcome, ${name}! Redirecting you now...`,
       });
-      router.push('/todo');
+      onRegistrationComplete();
     } catch (error) {
       console.error('Registration failed:', error);
       toast({
