@@ -1,1 +1,5 @@
-// Flows will be imported for their side effects in this file.
+import { config } from 'dotenv';
+config();
+
+import '@/ai/flows/facial-recognition-login.ts';
+import '@/ai/flows/intelligent-task-reminders.ts';
