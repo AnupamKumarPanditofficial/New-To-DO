@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Copy, Users, LogIn } from 'lucide-react';
+import { Loader2, Copy, Users, LogIn, ArrowLeft } from 'lucide-react';
 import {
   collection,
   doc,
@@ -145,7 +145,13 @@ export default function CollabPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <Header user={user} />
-      <main className="flex-1 w-full max-w-4xl mx-auto p-4 sm:p-6">
+      <main className="flex-1 w-full max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
+        <div className="flex justify-start">
+            <Button variant="outline" onClick={() => router.push('/todo')}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Tasks
+            </Button>
+        </div>
         {group ? (
           <Card className="shadow-lg">
             <CardHeader>
