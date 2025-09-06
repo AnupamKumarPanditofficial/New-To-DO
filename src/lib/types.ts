@@ -11,3 +11,14 @@ export interface Task {
   dueDate: string; // ISO string
   isCompleted: boolean;
 }
+
+export interface CollabMember {
+    id: string;
+    name: string;
+    tasks: Task[];
+}
+
+export interface CollabGroup {
+    id: string;
+    members: CollabMember[];
+}

@@ -9,6 +9,8 @@ import TaskReminders from '@/components/tasks/TaskReminders';
 import type { User, Task } from '@/lib/types';
 import AddTaskForm from '@/components/tasks/AddTaskForm';
 import TaskAnalytics from '@/components/tasks/TaskAnalytics';
+import { Button } from '@/components/ui/button';
+import { Users } from 'lucide-react';
 
 export default function TodoPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -87,6 +89,12 @@ export default function TodoPage() {
       <Header user={user} />
       <main className="flex-1 w-full max-w-4xl mx-auto p-4 sm:p-6">
         <div className="space-y-8">
+          <div className="flex justify-end">
+            <Button onClick={() => router.push('/collab')}>
+              <Users className="mr-2 h-4 w-4" />
+              Collaboration
+            </Button>
+          </div>
           <AddTaskForm onAddTask={addTask} />
           <TaskList tasks={tasks} onToggleTask={toggleTask} onDeleteTask={deleteTask} />
           <TaskAnalytics tasks={tasks} />
