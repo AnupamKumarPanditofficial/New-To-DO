@@ -27,6 +27,15 @@ export default function LoginForm({ user, onSwitchToRegister }: LoginFormProps) 
   };
 
   const handleCapture = async (imageSrc: string) => {
+    if (!imageSrc) {
+        toast({
+            title: 'Capture Failed',
+            description: 'Could not capture an image. Please try again.',
+            variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+    }
     try {
       const result = await facialRecognitionLogin({ photoDataUri: imageSrc });
 

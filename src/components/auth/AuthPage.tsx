@@ -14,17 +14,23 @@ export default function AuthPage() {
 
   useEffect(() => {
     // This effect runs only on the client
-    const session = localStorage.getItem('facetask_session');
-    if (session) {
-      router.replace('/todo');
-      return;
-    }
-    
-    const storedUser = localStorage.getItem('facetask_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-      setAuthState('login');
-    } else {
+    try {
+      const session = localStorage.getItem('facetask_session');
+      if (session) {
+        router.replace('/todo');
+        return;
+      }
+      
+      const storedUser = localStorage.getItem('facetask_user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+        setAuthState('login');
+      } else {
+        setAuthState('register');
+      }
+    } catch (error) {
+      console.error("Error during auth setup:", error);
+      // If there's any error (e.g., parsing JSON), default to register
       setAuthState('register');
     }
   }, [router]);
@@ -36,6 +42,7 @@ export default function AuthPage() {
   }, []);
   
   const handleRegistrationComplete = useCallback(() => {
+    // After registration, the session is set, so we can redirect.
     router.push('/todo');
   }, [router]);
 
