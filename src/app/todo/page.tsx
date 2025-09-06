@@ -16,6 +16,8 @@ import { doc, onSnapshot, getDoc, updateDoc } from 'firebase/firestore';
 import TaskSuggestions from '@/components/tasks/TaskSuggestions';
 import SetPurposeDialog from '@/components/purpose/SetPurposeDialog';
 import { useToast } from '@/hooks/use-toast';
+import StreakTracker from '@/components/tasks/StreakTracker';
+import { differenceInCalendarDays, startOfToday, parseISO } from 'date-fns';
 
 
 export default function TodoPage() {
@@ -25,6 +27,7 @@ export default function TodoPage() {
   const [group, setGroup] = useState<CollabGroup | null>(null);
   const [purpose, setPurpose] = useState<Purpose | null>(null);
   const [isPurposeDialogOpen, setIsPurposeDialogOpen] = useState(false);
+  const [streakInfo, setStreakInfo] = useState<{ dayCount: number, missedDays: number }>({ dayCount: 0, missedDays: 0 });
   const router = useRouter();
   const { toast } = useToast();
 
@@ -39,6 +42,48 @@ export default function TodoPage() {
 
     const parsedUser = JSON.parse(storedUser);
     setUser(parsedUser);
+
+    // --- Streak Logic ---
+    const today = startOfToday();
+    const lastLoginStr = localStorage.getItem(`facetask_last_login_${parsedUser.id}`);
+    let lastLoginDate = lastLoginStr ? parseISO(lastLoginStr) : null;
+    
+    if (lastLoginDate && differenceInCalendarDays(today, lastLoginDate) > 0) {
+      // It's a new day since the last login
+       localStorage.setItem(`facetask_last_login_${parsedUser.id}`, today.toISOString());
+    }
+    
+    const streakStartStr = localStorage.getItem(`facetask_streak_start_${parsedUser.id}`);
+
+    if (streakStartStr) {
+        const streakStartDate = parseISO(streakStartStr);
+        // Recalculate based on today's visit
+        const newLastLogin = startOfToday();
+        localStorage.setItem(`facetask_last_login_${parsedUser.id}`, newLastLogin.toISOString());
+        
+        const dayCount = differenceInCalendarDays(newLastLogin, streakStartDate) + 1;
+        const expectedDays = dayCount;
+        const actualLoginsStr = localStorage.getItem(`facetask_logins_${parsedUser.id}`);
+        let actualLogins = actualLoginsStr ? new Set(JSON.parse(actualLoginsStr)) : new Set();
+        
+        if (!actualLogins.has(newLastLogin.toISOString().split('T')[0])) {
+            actualLogins.add(newLastLogin.toISOString().split('T')[0]);
+            localStorage.setItem(`facetask_logins_${parsedUser.id}`, JSON.stringify(Array.from(actualLogins)));
+        }
+
+        const missedDays = expectedDays - actualLogins.size;
+        
+        setStreakInfo({ dayCount: actualLogins.size, missedDays });
+
+    } else {
+        // First login ever for this user
+        const newStreakStartDate = startOfToday();
+        localStorage.setItem(`facetask_streak_start_${parsedUser.id}`, newStreakStartDate.toISOString());
+        localStorage.setItem(`facetask_last_login_${parsedUser.id}`, newStreakStartDate.toISOString());
+        localStorage.setItem(`facetask_logins_${parsedUser.id}`, JSON.stringify([newStreakStartDate.toISOString().split('T')[0]]));
+        setStreakInfo({ dayCount: 1, missedDays: 0 });
+    }
+
 
     // Purpose logic
     const storedPurpose = localStorage.getItem(`facetask_purpose_${parsedUser.id}`);
@@ -168,7 +213,8 @@ export default function TodoPage() {
       <Header user={user} />
       <main className="flex-1 w-full max-w-4xl mx-auto p-4 sm:p-6">
         <div className="space-y-8">
-          <div className="flex justify-end">
+          <div className="flex justify-between items-center">
+            <StreakTracker dayCount={streakInfo.dayCount} missedDays={streakInfo.missedDays} />
             <Button onClick={() => router.push('/collab')}>
               <Users className="mr-2 h-4 w-4" />
               Collaboration
