@@ -6,14 +6,16 @@ import { Loader2 } from 'lucide-react';
 import Header from '@/components/Header';
 import TaskList from '@/components/tasks/TaskList';
 import TaskReminders from '@/components/tasks/TaskReminders';
-import type { User, Task, CollabGroup } from '@/lib/types';
+import type { User, Task, CollabGroup, Purpose } from '@/lib/types';
 import AddTaskForm from '@/components/tasks/AddTaskForm';
 import TaskAnalytics from '@/components/tasks/TaskAnalytics';
 import { Button } from '@/components/ui/button';
-import { Users } from 'lucide-react';
+import { Users, Pencil } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, getDoc, updateDoc } from 'firebase/firestore';
 import TaskSuggestions from '@/components/tasks/TaskSuggestions';
+import SetPurposeDialog from '@/components/purpose/SetPurposeDialog';
+import { useToast } from '@/hooks/use-toast';
 
 
 export default function TodoPage() {
@@ -21,7 +23,10 @@ export default function TodoPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [group, setGroup] = useState<CollabGroup | null>(null);
+  const [purpose, setPurpose] = useState<Purpose | null>(null);
+  const [isPurposeDialogOpen, setIsPurposeDialogOpen] = useState(false);
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     const session = localStorage.getItem('facetask_session');
@@ -35,6 +40,16 @@ export default function TodoPage() {
     const parsedUser = JSON.parse(storedUser);
     setUser(parsedUser);
 
+    // Purpose logic
+    const storedPurpose = localStorage.getItem(`facetask_purpose_${parsedUser.id}`);
+    if (storedPurpose) {
+      setPurpose(JSON.parse(storedPurpose));
+    } else {
+      // First time user, show the purpose dialog
+      setIsPurposeDialogOpen(true);
+    }
+    
+    // Group logic
     const storedGroupId = localStorage.getItem(`facetask_group_${parsedUser.id}`);
     
     let unsubscribe: (() => void) | undefined;
@@ -98,6 +113,17 @@ export default function TodoPage() {
     
     syncTasks();
   }, [tasks, user, group, isLoading]);
+  
+  const handlePurposeSet = (newPurpose: Purpose) => {
+    if (!user) return;
+    setPurpose(newPurpose);
+    localStorage.setItem(`facetask_purpose_${user.id}`, JSON.stringify(newPurpose));
+    setIsPurposeDialogOpen(false);
+    toast({
+        title: "Purpose Updated!",
+        description: "Your AI suggestions will now be tailored to your new goal."
+    });
+  }
 
   const addTask = (title: string, dueDate: Date) => {
     if (!user) return;
@@ -133,6 +159,12 @@ export default function TodoPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
+       <SetPurposeDialog 
+        isOpen={isPurposeDialogOpen}
+        onOpenChange={setIsPurposeDialogOpen}
+        onPurposeSet={handlePurposeSet}
+        currentPurpose={purpose}
+      />
       <Header user={user} />
       <main className="flex-1 w-full max-w-4xl mx-auto p-4 sm:p-6">
         <div className="space-y-8">
@@ -142,8 +174,14 @@ export default function TodoPage() {
               Collaboration
             </Button>
           </div>
+          <div className="text-center">
+             <Button variant="outline" onClick={() => setIsPurposeDialogOpen(true)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Change Your Goal
+            </Button>
+          </div>
           <AddTaskForm onAddTask={addTask} />
-          <TaskSuggestions onAddTask={addTask} group={group} />
+          <TaskSuggestions onAddTask={addTask} purpose={purpose} />
           <TaskList tasks={tasks} onToggleTask={toggleTask} onDeleteTask={deleteTask} />
           <TaskAnalytics tasks={tasks} />
         </div>

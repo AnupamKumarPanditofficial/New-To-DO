@@ -16,11 +16,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import type { CollabGroup } from '@/lib/types';
+import type { Purpose } from '@/lib/types';
 
 interface TaskSuggestionsProps {
   onAddTask: (title: string, dueDate: Date) => void;
-  group: CollabGroup | null;
+  purpose: Purpose | null;
 }
 
 const baseSuggestionCategories = [
@@ -29,19 +29,19 @@ const baseSuggestionCategories = [
   { label: 'Feeling Bored', prompt: 'feeling bored', icon: '😵' },
 ];
 
-export default function TaskSuggestions({ onAddTask, group }: TaskSuggestionsProps) {
+export default function TaskSuggestions({ onAddTask, purpose }: TaskSuggestionsProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const suggestionCategories = useMemo(() => {
-    if (group?.purpose === 'exams' && group.examName) {
+    if (purpose?.type === 'exams' && purpose.examName) {
       return [
         ...baseSuggestionCategories,
         { 
-          label: `Prep for ${group.examName}`, 
-          prompt: `daily tasks for preparing for the ${group.examName} exam`, 
+          label: `Prep for ${purpose.examName}`, 
+          prompt: `daily tasks for preparing for the ${purpose.examName} exam`, 
           icon: <BookOpenCheck className="h-4 w-4" /> 
         },
       ];
@@ -50,7 +50,7 @@ export default function TaskSuggestions({ onAddTask, group }: TaskSuggestionsPro
         ...baseSuggestionCategories,
         { label: 'Get Productive', prompt: 'a desire to be productive', icon: '🚀' },
     ];
-  }, [group]);
+  }, [purpose]);
 
   const handleGetSuggestions = async (prompt: string) => {
     setIsLoading(true);

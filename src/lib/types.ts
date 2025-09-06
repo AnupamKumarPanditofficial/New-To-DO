@@ -25,3 +25,9 @@ export interface CollabGroup {
     examName?: string;
     examDuration?: 30 | 60 | 90 | 120;
 }
+
+export interface Purpose {
+  type: 'normal' | 'exams';
+  examName?: string;
+  examDuration?: 30 | 60 | 90 | 120;
+}
