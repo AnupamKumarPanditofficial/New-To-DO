@@ -21,6 +21,7 @@ import type { Purpose } from '@/lib/types';
 interface TaskSuggestionsProps {
   onAddTask: (title: string, dueDate: Date) => void;
   purpose: Purpose | null;
+  dayCount: number;
 }
 
 const baseSuggestionCategories = [
@@ -29,7 +30,7 @@ const baseSuggestionCategories = [
   { label: 'Feeling Bored', prompt: 'feeling bored', icon: '😵' },
 ];
 
-export default function TaskSuggestions({ onAddTask, purpose }: TaskSuggestionsProps) {
+export default function TaskSuggestions({ onAddTask, purpose, dayCount }: TaskSuggestionsProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -42,21 +43,32 @@ export default function TaskSuggestions({ onAddTask, purpose }: TaskSuggestionsP
         { 
           label: `Look at today's list for preparation of ${purpose.examName}`, 
           prompt: `daily tasks for preparing for the ${purpose.examName} exam`, 
-          icon: <BookOpenCheck className="h-4 w-4" /> 
+          icon: <BookOpenCheck className="h-4 w-4" />,
+          isExam: true,
         },
       ];
     }
     return [
         ...baseSuggestionCategories,
-        { label: 'Get Productive', prompt: 'a desire to be productive', icon: '🚀' },
+        { label: 'Get Productive', prompt: 'get productive', icon: '🚀', isExam: false },
     ];
   }, [purpose]);
 
-  const handleGetSuggestions = async (prompt: string) => {
+  const handleGetSuggestions = async (prompt: string, isExam: boolean) => {
     setIsLoading(true);
     setIsDialogOpen(true);
     try {
-      const response = await suggestTasks({ prompt });
+      let response;
+      if (isExam && purpose?.type === 'exams') {
+        response = await suggestTasks({ 
+          prompt,
+          examName: purpose.examName,
+          examDuration: purpose.examDuration,
+          currentDay: dayCount,
+         });
+      } else {
+        response = await suggestTasks({ prompt });
+      }
       setSuggestions(response.suggestions);
     } catch (error) {
       console.error('Failed to get suggestions:', error);
@@ -91,11 +103,11 @@ export default function TaskSuggestions({ onAddTask, purpose }: TaskSuggestionsP
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
-          {suggestionCategories.map(({ label, prompt, icon }) => (
+          {suggestionCategories.map(({ label, prompt, icon, isExam }) => (
             <Button
               key={prompt}
               variant="outline"
-              onClick={() => handleGetSuggestions(prompt)}
+              onClick={() => handleGetSuggestions(prompt, !!isExam)}
               disabled={isLoading}
               className="flex items-center"
             >
@@ -114,13 +126,13 @@ export default function TaskSuggestions({ onAddTask, purpose }: TaskSuggestionsP
               AI-Powered Suggestions
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Here are a few ideas to get you started. Add any you like to your task list.
+              Here are a few ideas from your AI mentor. Add any you like to your task list.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {isLoading ? (
             <div className="flex items-center justify-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="ml-4">Thinking...</p>
+              <p className="ml-4">Crafting your plan...</p>
             </div>
           ) : (
             <div className="space-y-3 py-4">

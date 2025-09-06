@@ -227,7 +227,11 @@ export default function TodoPage() {
             </Button>
           </div>
           <AddTaskForm onAddTask={addTask} />
-          <TaskSuggestions onAddTask={addTask} purpose={purpose} />
+          <TaskSuggestions 
+            onAddTask={addTask} 
+            purpose={purpose} 
+            dayCount={streakInfo.dayCount} 
+          />
           <TaskList tasks={tasks} onToggleTask={toggleTask} onDeleteTask={deleteTask} />
           <TaskAnalytics tasks={tasks} />
         </div>
