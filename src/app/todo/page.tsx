@@ -37,7 +37,7 @@ export default function TodoPage() {
     const storedGroupId = localStorage.getItem(`facetask_group_${parsedUser.id}`);
     setGroupId(storedGroupId);
 
-    let unsubscribe: () => void;
+    let unsubscribe: (() => void) | undefined;
 
     if (storedGroupId) {
       // User is in a group, listen to group changes
@@ -70,25 +70,32 @@ export default function TodoPage() {
   useEffect(() => {
     if (!user || isLoading) return;
 
-    if (groupId) {
-      // Firestore sync
-      const groupRef = doc(db, 'collabGroups', groupId);
-      getDoc(groupRef).then(docSnap => {
-        if (docSnap.exists()) {
-          const groupData = docSnap.data() as CollabGroup;
-          const currentMember = groupData.members.find(m => m.id === user.id);
-          if (currentMember) {
-             const updatedMembers = groupData.members.map(m => 
-                m.id === user.id ? { ...m, tasks } : m
-            );
-            updateDoc(groupRef, { members: updatedMembers });
+    const syncTasks = async () => {
+        if (groupId) {
+          // Firestore sync
+          const groupRef = doc(db, 'collabGroups', groupId);
+          try {
+            const docSnap = await getDoc(groupRef);
+            if (docSnap.exists()) {
+              const groupData = docSnap.data() as CollabGroup;
+              const memberExists = groupData.members.some(m => m.id === user.id);
+              if (memberExists) {
+                const updatedMembers = groupData.members.map(m => 
+                    m.id === user.id ? { ...m, tasks } : m
+                );
+                await updateDoc(groupRef, { members: updatedMembers });
+              }
+            }
+          } catch (error) {
+            console.error("Error syncing tasks to Firestore:", error);
           }
+        } else {
+          // Local storage sync
+          localStorage.setItem(`facetask_tasks_${user.id}`, JSON.stringify(tasks));
         }
-      });
-    } else {
-      // Local storage sync
-      localStorage.setItem(`facetask_tasks_${user.id}`, JSON.stringify(tasks));
-    }
+    };
+    
+    syncTasks();
   }, [tasks, user, groupId, isLoading]);
 
   const addTask = (title: string, dueDate: Date) => {
