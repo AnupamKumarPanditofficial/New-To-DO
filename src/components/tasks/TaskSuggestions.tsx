@@ -40,7 +40,7 @@ export default function TaskSuggestions({ onAddTask, purpose }: TaskSuggestionsP
       return [
         ...baseSuggestionCategories,
         { 
-          label: `Prep for ${purpose.examName}`, 
+          label: `Look at today's list for preparation of ${purpose.examName}`, 
           prompt: `daily tasks for preparing for the ${purpose.examName} exam`, 
           icon: <BookOpenCheck className="h-4 w-4" /> 
         },
