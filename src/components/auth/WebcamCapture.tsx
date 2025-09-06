@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 're
 import { Camera, CameraOff, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface WebcamCaptureProps {
   onCapture: (imageSrc: string) => void;
@@ -20,6 +21,7 @@ const WebcamCapture = forwardRef<WebcamCaptureRef, WebcamCaptureProps>(
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isCameraOn, setIsCameraOn] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { toast } = useToast();
 
     const startCamera = async () => {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -30,9 +32,18 @@ const WebcamCapture = forwardRef<WebcamCaptureRef, WebcamCaptureProps>(
           }
           setIsCameraOn(true);
           setError(null);
-        } catch (err) {
+        } catch (err: any) {
           console.error('Error accessing camera:', err);
-          setError('Could not access the camera. Please check permissions.');
+          let errorMessage = 'Could not access the camera. Please try again.';
+          if (err.name === "NotAllowedError") {
+            errorMessage = "Camera access denied. Please enable it in your browser settings.";
+             toast({
+                title: 'Camera Permission Denied',
+                description: 'Please allow camera access in your browser settings to continue.',
+                variant: 'destructive',
+             });
+          }
+          setError(errorMessage);
           setIsCameraOn(false);
         }
       } else {
@@ -63,20 +74,31 @@ const WebcamCapture = forwardRef<WebcamCaptureRef, WebcamCaptureProps>(
       return () => {
         stopCamera();
       };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const capture = () => {
-      if (videoRef.current && canvasRef.current) {
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const context = canvas.getContext('2d');
-        if (context) {
-          context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-          const dataUri = canvas.toDataURL('image/jpeg');
-          onCapture(dataUri);
-        }
+      if (!isCameraOn || !videoRef.current || !canvasRef.current) {
+         toast({
+            title: 'Camera Not Ready',
+            description: 'Please turn on your camera and grant permissions before capturing.',
+            variant: 'destructive',
+          });
+        onCapture(''); // Pass empty string to signal failure
+        return;
+      }
+      
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      if (context) {
+        context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+        const dataUri = canvas.toDataURL('image/jpeg');
+        onCapture(dataUri);
+      } else {
+        onCapture(''); // Pass empty string on failure
       }
     };
 

@@ -38,6 +38,15 @@ export default function RegisterForm({ onRegistrationComplete }: RegisterFormPro
   };
 
   const handleCapture = (imageSrc: string) => {
+    if (!imageSrc) {
+        toast({
+            title: 'Capture Failed',
+            description: 'Could not capture an image. Please check your camera and permissions.',
+            variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+    }
     try {
       const newUser: User = {
         id: getUUID(),

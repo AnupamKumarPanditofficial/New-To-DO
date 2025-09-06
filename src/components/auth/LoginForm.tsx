@@ -30,7 +30,7 @@ export default function LoginForm({ user, onSwitchToRegister }: LoginFormProps) 
     if (!imageSrc) {
         toast({
             title: 'Capture Failed',
-            description: 'Could not capture an image. Please try again.',
+            description: 'Could not capture an image. Please check your camera and permissions.',
             variant: 'destructive',
         });
         setIsLoading(false);
