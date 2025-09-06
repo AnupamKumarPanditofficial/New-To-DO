@@ -55,10 +55,9 @@ export default function TaskSuggestions({ onAddTask }: TaskSuggestionsProps) {
   };
 
   const handleAddTask = (suggestion: string) => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(12, 0, 0, 0); // Set to noon tomorrow
-    onAddTask(suggestion, tomorrow);
+    const today = new Date();
+    today.setHours(12, 0, 0, 0); // Set to noon today
+    onAddTask(suggestion, today);
     toast({
       title: 'Task Added!',
       description: `"${suggestion}" has been added to your list.`,
