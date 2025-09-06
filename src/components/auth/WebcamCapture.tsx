@@ -5,6 +5,7 @@ import { Camera, CameraOff, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface WebcamCaptureProps {
   onCapture: (imageSrc: string) => void;
@@ -15,39 +16,34 @@ export interface WebcamCaptureRef {
   capture: () => void;
 }
 
+type CameraState = 'loading' | 'on' | 'off' | 'denied' | 'error';
+
 const WebcamCapture = forwardRef<WebcamCaptureRef, WebcamCaptureProps>(
   ({ onCapture, className }, ref) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [isCameraOn, setIsCameraOn] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [cameraState, setCameraState] = useState<CameraState>('loading');
     const { toast } = useToast();
 
     const startCamera = async () => {
+      setCameraState('loading');
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true });
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
           }
-          setIsCameraOn(true);
-          setError(null);
+          setCameraState('on');
         } catch (err: any) {
           console.error('Error accessing camera:', err);
-          let errorMessage = 'Could not access the camera. Please try again.';
-          if (err.name === "NotAllowedError") {
-            errorMessage = "Camera access denied. Please enable it in your browser settings.";
-             toast({
-                title: 'Camera Permission Denied',
-                description: 'Please allow camera access in your browser settings to continue.',
-                variant: 'destructive',
-             });
+          if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+            setCameraState('denied');
+          } else {
+            setCameraState('error');
           }
-          setError(errorMessage);
-          setIsCameraOn(false);
         }
       } else {
-        setError('Your browser does not support camera access.');
+        setCameraState('error');
       }
     };
 
@@ -56,12 +52,12 @@ const WebcamCapture = forwardRef<WebcamCaptureRef, WebcamCaptureProps>(
         const stream = videoRef.current.srcObject as MediaStream;
         stream.getTracks().forEach((track) => track.stop());
         videoRef.current.srcObject = null;
-        setIsCameraOn(false);
+        setCameraState('off');
       }
     };
 
     const handleToggleCamera = () => {
-      if (isCameraOn) {
+      if (cameraState === 'on') {
         stopCamera();
       } else {
         startCamera();
@@ -69,7 +65,6 @@ const WebcamCapture = forwardRef<WebcamCaptureRef, WebcamCaptureProps>(
     };
     
     useEffect(() => {
-      // Automatically start camera on mount
       startCamera();
       return () => {
         stopCamera();
@@ -78,13 +73,13 @@ const WebcamCapture = forwardRef<WebcamCaptureRef, WebcamCaptureProps>(
     }, []);
 
     const capture = () => {
-      if (!isCameraOn || !videoRef.current || !canvasRef.current) {
+      if (cameraState !== 'on' || !videoRef.current || !canvasRef.current) {
          toast({
             title: 'Camera Not Ready',
             description: 'Please turn on your camera and grant permissions before capturing.',
             variant: 'destructive',
           });
-        onCapture(''); // Pass empty string to signal failure
+        onCapture(''); 
         return;
       }
       
@@ -98,7 +93,7 @@ const WebcamCapture = forwardRef<WebcamCaptureRef, WebcamCaptureProps>(
         const dataUri = canvas.toDataURL('image/jpeg');
         onCapture(dataUri);
       } else {
-        onCapture(''); // Pass empty string on failure
+        onCapture('');
       }
     };
 
@@ -114,15 +109,28 @@ const WebcamCapture = forwardRef<WebcamCaptureRef, WebcamCaptureProps>(
             autoPlay
             playsInline
             muted
-            className={cn('w-full h-full object-cover transition-opacity duration-300', isCameraOn ? 'opacity-100' : 'opacity-0')}
+            className={cn('w-full h-full object-cover transition-opacity duration-300', cameraState === 'on' ? 'opacity-100' : 'opacity-0')}
           />
-          {!isCameraOn && (
+          {cameraState !== 'on' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground p-4 text-center">
-              {error ? (
-                <>
-                  <AlertCircle className="w-10 h-10 mb-2 text-destructive" />
-                  <p className="text-sm">{error}</p>
-                </>
+              {cameraState === 'denied' ? (
+                <Alert variant="destructive" className="text-left">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Camera Access Denied</AlertTitle>
+                  <AlertDescription>
+                    Please enable camera permissions in your browser settings to use this feature.
+                  </AlertDescription>
+                </Alert>
+              ) : cameraState === 'error' ? (
+                 <Alert variant="destructive" className="text-left">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Camera Error</AlertTitle>
+                  <AlertDescription>
+                    Could not access the camera. It might be in use by another application or not supported by your browser.
+                  </AlertDescription>
+                </Alert>
+              ) : cameraState === 'loading' ? (
+                 <p>Starting camera...</p>
               ) : (
                 <>
                   <CameraOff className="w-10 h-10 mb-2" />
@@ -132,9 +140,9 @@ const WebcamCapture = forwardRef<WebcamCaptureRef, WebcamCaptureProps>(
             </div>
           )}
         </div>
-        <Button onClick={handleToggleCamera} variant="outline" size="sm">
-          {isCameraOn ? <CameraOff className="mr-2 h-4 w-4" /> : <Camera className="mr-2 h-4 w-4" />}
-          {isCameraOn ? 'Turn Camera Off' : 'Turn Camera On'}
+        <Button onClick={handleToggleCamera} variant="outline" size="sm" disabled={cameraState === 'denied' || cameraState === 'loading'}>
+          {cameraState === 'on' ? <CameraOff className="mr-2 h-4 w-4" /> : <Camera className="mr-2 h-4 w-4" />}
+          {cameraState === 'on' ? 'Turn Camera Off' : 'Turn Camera On'}
         </Button>
         <canvas ref={canvasRef} className="hidden" />
       </div>
