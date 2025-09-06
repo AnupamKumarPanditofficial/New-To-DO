@@ -56,13 +56,9 @@ export default function LoginForm() {
     }
     
     try {
-      // The AI flow is designed to return a user ID if successful.
-      // In a real-world scenario, the AI would compare the face against a database.
-      // For this app, we're simulating that by having the AI "recognize" the registered user if a face is present.
-      // We will now correctly use the response from the AI.
       const result = await facialRecognitionLogin({ photoDataUri: imageSrc });
 
-      if (result.isLoginSuccessful && result.userId === user.id) {
+      if (result.isLoginSuccessful) {
         localStorage.setItem('facetask_session', JSON.stringify({ userId: user.id }));
         toast({
           title: 'Login Successful!',
@@ -70,7 +66,6 @@ export default function LoginForm() {
         });
         router.push('/todo');
       } else {
-        // This handles both AI not recognizing the face and a mismatch with the expected user
          toast({
           title: 'Login Failed',
           description: 'We could not recognize your face. Please try again.',
@@ -127,7 +122,7 @@ export default function LoginForm() {
         </Button>
         <Button variant="link" size="sm" onClick={() => {
             localStorage.clear();
-            router.refresh();
+            router.push('/');
         }}>
             Not you? Register a new user.
         </Button>
