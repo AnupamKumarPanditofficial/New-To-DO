@@ -4,18 +4,14 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Copy, Users, LogIn, ArrowLeft } from 'lucide-react';
 import {
-  collection,
   doc,
   setDoc,
   getDoc,
   onSnapshot,
-  query,
-  where,
-  getDocs,
   updateDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { User, Task, CollabGroup } from '@/lib/types';
+import type { User, CollabGroup } from '@/lib/types';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,6 +25,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import FriendsAnalyticsChart from '@/components/collab/FriendsAnalyticsChart';
+import SetGroupPurposeDialog from '@/components/collab/SetGroupPurposeDialog';
 
 export default function CollabPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -37,6 +34,7 @@ export default function CollabPage() {
   const [passkey, setPasskey] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isPurposeDialogOpen, setIsPurposeDialogOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -54,7 +52,11 @@ export default function CollabPage() {
       const groupRef = doc(db, 'collabGroups', storedGroupId);
       const unsubscribe = onSnapshot(groupRef, (docSnap) => {
         if (docSnap.exists()) {
-          setGroup({ id: docSnap.id, ...docSnap.data() } as CollabGroup);
+          const groupData = { id: docSnap.id, ...docSnap.data() } as CollabGroup;
+          setGroup(groupData);
+          if (!groupData.purpose) {
+            setIsPurposeDialogOpen(true);
+          }
         } else {
           localStorage.removeItem(`facetask_group_${parsedUser.id}`);
           setGroup(null);
@@ -85,6 +87,7 @@ export default function CollabPage() {
       await setDoc(doc(db, 'collabGroups', groupId), newGroup);
       localStorage.setItem(`facetask_group_${user.id}`, groupId);
       setGroup(newGroup);
+      // Purpose dialog will be triggered by useEffect
     } catch (error) {
       console.error('Error creating group: ', error);
       toast({ title: 'Error creating group', variant: 'destructive' });
@@ -110,6 +113,7 @@ export default function CollabPage() {
         }
         localStorage.setItem(`facetask_group_${user.id}`, passkey);
         setGroup({ id: passkey, ...docSnap.data() } as CollabGroup);
+        // Purpose dialog will be triggered by useEffect
       } else {
         toast({ title: 'Group not found', variant: 'destructive' });
       }
@@ -123,6 +127,7 @@ export default function CollabPage() {
 
   const leaveGroup = () => {
     if (!user) return;
+    // Note: We are not removing the user from the group members list in firestore for simplicity
     localStorage.removeItem(`facetask_group_${user.id}`);
     setGroup(null);
     toast({ title: 'You have left the group.' });
@@ -132,6 +137,14 @@ export default function CollabPage() {
     if(!group?.id) return;
     navigator.clipboard.writeText(group.id);
     toast({ title: "Passkey copied to clipboard!" });
+  }
+
+  const handlePurposeSet = async (purposeData: Partial<CollabGroup>) => {
+    if (!group) return;
+    const groupRef = doc(db, 'collabGroups', group.id);
+    await updateDoc(groupRef, purposeData);
+    setIsPurposeDialogOpen(false);
+    toast({ title: "Group purpose has been set!" });
   }
 
   if (isLoading) {
@@ -153,27 +166,38 @@ export default function CollabPage() {
             </Button>
         </div>
         {group ? (
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Collaboration Dashboard</span>
-                <Button variant="ghost" onClick={copyPasskey} size="sm">
-                  Passkey: {group.id} <Copy className="ml-2 h-4 w-4"/>
+          <>
+            <SetGroupPurposeDialog 
+              isOpen={isPurposeDialogOpen}
+              onOpenChange={setIsPurposeDialogOpen}
+              onPurposeSet={handlePurposeSet}
+            />
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Collaboration Dashboard</span>
+                  <Button variant="ghost" onClick={copyPasskey} size="sm">
+                    Passkey: {group.id} <Copy className="ml-2 h-4 w-4"/>
+                  </Button>
+                </CardTitle>
+                <CardDescription>
+                  Here is the real-time productivity of your group. 
+                  {group.purpose === 'exams' && ` Currently preparing for: ${group.examName}`}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FriendsAnalyticsChart group={group} currentUser={user} />
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <Button variant="destructive" onClick={leaveGroup}>
+                  Leave Group
                 </Button>
-              </CardTitle>
-              <CardDescription>
-                Here is the real-time productivity of your group.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <FriendsAnalyticsChart group={group} currentUser={user} />
-            </CardContent>
-            <CardFooter>
-              <Button variant="destructive" onClick={leaveGroup}>
-                Leave Group
-              </Button>
-            </CardFooter>
-          </Card>
+                 <Button variant="outline" onClick={() => setIsPurposeDialogOpen(true)}>
+                  Change Purpose
+                </Button>
+              </CardFooter>
+            </Card>
+          </>
         ) : (
           <div className="grid md:grid-cols-2 gap-8">
             <Card className="shadow-lg">

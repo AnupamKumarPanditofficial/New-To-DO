@@ -12,7 +12,7 @@ import TaskAnalytics from '@/components/tasks/TaskAnalytics';
 import { Button } from '@/components/ui/button';
 import { Users } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, setDoc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, updateDoc } from 'firebase/firestore';
 import TaskSuggestions from '@/components/tasks/TaskSuggestions';
 
 
@@ -20,7 +20,7 @@ export default function TodoPage() {
   const [user, setUser] = useState<User | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [groupId, setGroupId] = useState<string | null>(null);
+  const [group, setGroup] = useState<CollabGroup | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -36,8 +36,7 @@ export default function TodoPage() {
     setUser(parsedUser);
 
     const storedGroupId = localStorage.getItem(`facetask_group_${parsedUser.id}`);
-    setGroupId(storedGroupId);
-
+    
     let unsubscribe: (() => void) | undefined;
 
     if (storedGroupId) {
@@ -46,6 +45,7 @@ export default function TodoPage() {
       unsubscribe = onSnapshot(groupRef, (docSnap) => {
         if (docSnap.exists()) {
           const groupData = docSnap.data() as CollabGroup;
+          setGroup(groupData);
           const member = groupData.members.find(m => m.id === parsedUser.id);
           setTasks(member?.tasks || []);
         }
@@ -72,9 +72,9 @@ export default function TodoPage() {
     if (!user || isLoading) return;
 
     const syncTasks = async () => {
-        if (groupId) {
+        if (group) {
           // Firestore sync
-          const groupRef = doc(db, 'collabGroups', groupId);
+          const groupRef = doc(db, 'collabGroups', group.id);
           try {
             const docSnap = await getDoc(groupRef);
             if (docSnap.exists()) {
@@ -97,7 +97,7 @@ export default function TodoPage() {
     };
     
     syncTasks();
-  }, [tasks, user, groupId, isLoading]);
+  }, [tasks, user, group, isLoading]);
 
   const addTask = (title: string, dueDate: Date) => {
     if (!user) return;
@@ -143,7 +143,7 @@ export default function TodoPage() {
             </Button>
           </div>
           <AddTaskForm onAddTask={addTask} />
-          <TaskSuggestions onAddTask={addTask} />
+          <TaskSuggestions onAddTask={addTask} group={group} />
           <TaskList tasks={tasks} onToggleTask={toggleTask} onDeleteTask={deleteTask} />
           <TaskAnalytics tasks={tasks} />
         </div>

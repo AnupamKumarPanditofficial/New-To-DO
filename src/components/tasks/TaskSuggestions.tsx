@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { suggestTasks } from '@/ai/flows/suggest-tasks';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { BrainCircuit, Loader2, Sparkles, Plus } from 'lucide-react';
+import { BrainCircuit, Loader2, Sparkles, Plus, BookOpenCheck } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,24 +16,41 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import type { CollabGroup } from '@/lib/types';
 
 interface TaskSuggestionsProps {
   onAddTask: (title: string, dueDate: Date) => void;
+  group: CollabGroup | null;
 }
 
-const suggestionCategories = [
+const baseSuggestionCategories = [
   { label: 'Feeling Sad', prompt: 'feeling sad', icon: '😔' },
   { label: 'Feeling Tired', prompt: 'feeling tired', icon: '😴' },
-  { label: 'Exam Prep', prompt: 'preparing for an exam', icon: '📚' },
   { label: 'Feeling Bored', prompt: 'feeling bored', icon: '😵' },
-  { label: 'Get Productive', prompt: 'a desire to be productive', icon: '🚀' },
 ];
 
-export default function TaskSuggestions({ onAddTask }: TaskSuggestionsProps) {
+export default function TaskSuggestions({ onAddTask, group }: TaskSuggestionsProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  const suggestionCategories = useMemo(() => {
+    if (group?.purpose === 'exams' && group.examName) {
+      return [
+        ...baseSuggestionCategories,
+        { 
+          label: `Prep for ${group.examName}`, 
+          prompt: `daily tasks for preparing for the ${group.examName} exam`, 
+          icon: <BookOpenCheck className="h-4 w-4" /> 
+        },
+      ];
+    }
+    return [
+        ...baseSuggestionCategories,
+        { label: 'Get Productive', prompt: 'a desire to be productive', icon: '🚀' },
+    ];
+  }, [group]);
 
   const handleGetSuggestions = async (prompt: string) => {
     setIsLoading(true);
@@ -80,6 +97,7 @@ export default function TaskSuggestions({ onAddTask }: TaskSuggestionsProps) {
               variant="outline"
               onClick={() => handleGetSuggestions(prompt)}
               disabled={isLoading}
+              className="flex items-center"
             >
               <span className="mr-2">{icon}</span>
               {label}
