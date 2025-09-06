@@ -9,6 +9,7 @@ import {
   getDoc,
   onSnapshot,
   updateDoc,
+  arrayRemove,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { User, CollabGroup } from '@/lib/types';
@@ -125,12 +126,29 @@ export default function CollabPage() {
     }
   };
 
-  const leaveGroup = () => {
-    if (!user) return;
-    // Note: We are not removing the user from the group members list in firestore for simplicity
-    localStorage.removeItem(`facetask_group_${user.id}`);
-    setGroup(null);
-    toast({ title: 'You have left the group.' });
+  const leaveGroup = async () => {
+    if (!user || !group) return;
+    
+    const groupRef = doc(db, 'collabGroups', group.id);
+    
+    try {
+      // Find the member object to remove
+      const memberToRemove = group.members.find(m => m.id === user.id);
+      if (memberToRemove) {
+        // Atomically remove the member from the 'members' array in Firestore.
+        await updateDoc(groupRef, {
+          members: arrayRemove(memberToRemove)
+        });
+      }
+    } catch (error) {
+       console.error("Error leaving group:", error);
+       toast({ title: "Error leaving group", description: "Could not update the group in the database.", variant: "destructive" });
+       // Still proceed with local cleanup
+    } finally {
+       localStorage.removeItem(`facetask_group_${user.id}`);
+       setGroup(null);
+       toast({ title: 'You have left the group.' });
+    }
   };
   
   const copyPasskey = () => {
