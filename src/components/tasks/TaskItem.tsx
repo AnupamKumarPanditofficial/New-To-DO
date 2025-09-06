@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Trash2, Calendar } from 'lucide-react';
 import type { Task } from '@/lib/types';
@@ -15,8 +16,18 @@ interface TaskItemProps {
 }
 
 export default function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(new Date());
+    }, 5000); // Update every 5 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+  
   const dueDate = new Date(task.dueDate);
-  const isOverdue = !task.isCompleted && new Date() > dueDate;
+  const isOverdue = !task.isCompleted && now > dueDate;
 
   const formattedDueDate = format(dueDate, 'PPp');
 
@@ -51,7 +62,7 @@ export default function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
           )} title={formattedDueDate}>
             <Calendar className="h-3 w-3" />
             <span>
-              {isOverdue ? 'Was due' : 'Due'} {formatDistanceToNow(dueDate, { addSuffix: true })}
+              {isOverdue ? 'Was due' : 'Due'} {formatDistanceToNow(dueDate, { addSuffix: true, now })}
             </span>
           </div>
         </div>
